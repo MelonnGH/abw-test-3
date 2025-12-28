@@ -1,0 +1,651 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>ABW‑Style Free‑Flow Timeline (15,000 BCE → 2025)</title>
+<style>
+  :root{
+    --bg:#0b0f14;
+    --panel:#0f1623;
+    --text:#e6eaf2;
+    --muted:#9aa4b2;
+    --yellow:#f6e05e;
+    --pink:#ff6ea8;
+    --line:rgba(255,255,255,.10);
+    --btn:rgba(255,255,255,.06);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;background:var(--bg);color:var(--text);}
+  header{
+    position:sticky;top:0;z-index:10;
+    background:rgba(11,15,20,.92);
+    backdrop-filter: blur(10px);
+    border-bottom:1px solid var(--line);
+    padding:14px 16px 10px;
+  }
+  h1{margin:0;font-size:18px;letter-spacing:.2px}
+  .sub{margin-top:6px;color:var(--muted);font-size:13px;line-height:1.35}
+  .wrap{max-width:980px;margin:0 auto;padding:14px 16px 24px}
+  .toprow{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px}
+  .pill{padding:6px 10px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.04);font-size:13px;}
+  .btn{border-radius:10px;border:1px solid var(--line);background:var(--btn);color:var(--text);padding:9px 11px;font-size:13px;cursor:pointer;}
+  .btn:hover{background:rgba(255,255,255,.09)}
+  .grid{display:grid;gap:14px}
+  @media(min-width:960px){ .grid{grid-template-columns:1.2fr .8fr; align-items:start;} }
+  .card{border:1px solid var(--line);background:rgba(15,22,35,.85);border-radius:14px;padding:12px;}
+  .card h2{margin:0 0 8px;font-size:15px}
+  .legend{display:flex;gap:10px;flex-wrap:wrap;color:var(--muted);font-size:12px}
+  .swatch{display:inline-flex;align-items:center;gap:8px}
+  .dot{width:10px;height:10px;border-radius:3px}
+  .dot.yellow{background:var(--yellow)}
+  .dot.pink{background:var(--pink)}
+  ul{margin:0;padding-left:18px}
+  li{margin:10px 0 12px}
+  .eventTitle{font-weight:800;letter-spacing:.1px;text-decoration:none;cursor:pointer;}
+  .eventTitle.yellow{color:var(--yellow)}
+  .eventTitle.pink{color:var(--pink)}
+  .eventMeta{color:var(--muted);font-size:12px;margin-top:4px;line-height:1.35}
+  .hr{height:1px;background:var(--line);margin:10px 0}
+  .note{color:var(--muted);font-size:12px;line-height:1.35}
+
+  /* Modal */
+  .modalBack{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:flex-end;justify-content:center;padding:18px;z-index:100;}
+  .modal{width:min(820px,100%);background:rgba(15,22,35,.98);border:1px solid var(--line);border-radius:16px;overflow:hidden;}
+  .modalHead{padding:12px 14px;border-bottom:1px solid var(--line)}
+  .modalHead .t{font-weight:900}
+  .modalHead .m{color:var(--muted);font-size:12px;margin-top:4px;line-height:1.35}
+  .modalBody{padding:12px 14px;display:grid;gap:10px}
+  .choice{width:100%;text-align:left;border-radius:12px;padding:12px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.05);color:var(--text);cursor:pointer;}
+  .choice:hover{background:rgba(255,255,255,.08)}
+  .modalFoot{padding:12px 14px;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<header>
+  <h1>ABW‑Style Free‑Flow Timeline (15,000 BCE → 2025)</h1>
+  <div class="sub">
+    Dates you can change are in <span style="color:var(--yellow);font-weight:800">yellow</span>.
+    Dates you changed are in <span style="color:var(--pink);font-weight:800">pink</span>.
+    Tap any event to rewrite history — the future will regenerate.
+  </div>
+  <div class="toprow">
+    <span class="pill">Karma: <strong id="karma">0</strong></span>
+    <button class="btn" onclick="showUchronies()">See list of Uchronies</button>
+    <button class="btn" onclick="startOver()">It didn’t go well, I’d like to start over…</button>
+    <button class="btn" onclick="exportSave()">Export save</button>
+  </div>
+</header>
+
+<div class="wrap grid">
+  <section class="card">
+    <h2>Timeline</h2>
+    <div class="legend">
+      <span class="swatch"><span class="dot yellow"></span>modifiable</span>
+      <span class="swatch"><span class="dot pink"></span>changed</span>
+    </div>
+    <div class="hr"></div>
+    <ul id="timeline"></ul>
+    <div class="hr"></div>
+    <div class="note">Suspense mode: choices don’t reveal their effects. You’ll see the consequences later in the chain.</div>
+  </section>
+
+  <aside class="card">
+    <h2>2025 End Card</h2>
+    <div class="note" id="endcard">Reach 2025 to see your world summary.</div>
+    <div class="hr"></div>
+    <div class="note">
+      New uchrony = new starting years. Each restart generates a fresh set of dates even if you make similar choices.
+    </div>
+  </aside>
+</div>
+
+<div class="modalBack" id="modalBack" onclick="if(event.target.id==='modalBack') closeModal()">
+  <div class="modal">
+    <div class="modalHead">
+      <div class="t" id="modalTitle">Event</div>
+      <div class="m" id="modalDesc">Choose a modification.</div>
+    </div>
+    <div class="modalBody" id="modalChoices"></div>
+    <div class="modalFoot">
+      <button class="btn" onclick="closeModal()">Close</button>
+      <div class="note">Choosing an option will regenerate everything after this date.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* -------------------- PRNG -------------------- */
+function xmur3(str){for(var i=0,h=1779033703^str.length;i<str.length;i++){h=Math.imul(h^str.charCodeAt(i),3432918353);h=h<<13|h>>>19;}return function(){h=Math.imul(h^h>>>16,2246822507);h=Math.imul(h^h>>>13,3266489909);return (h^h>>>16)>>>0;}}
+function sfc32(a,b,c,d){return function(){a|=0;b|=0;c|=0;d|=0;var t=(a+b|0)+d|0;d=d+1|0;a=b^b>>>9;b=c+(c<<3)|0;c=(c<<21|c>>>11);c=c+t|0;return (t>>>0)/4294967296;}}
+function makeRng(seedStr){const seed=xmur3(seedStr);return sfc32(seed(),seed(),seed(),seed());}
+const clamp=(x,min,max)=>Math.max(min,Math.min(max,x));
+
+function formatYear(y){ return y<0 ? `${Math.abs(y)} BCE` : `${y} CE`; }
+function escapeHtml(str){
+  return String(str).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;").replaceAll("'","&#039;");
+}
+function randHex(n=8){
+  const a=new Uint8Array(n/2);
+  crypto.getRandomValues(a);
+  return [...a].map(b=>b.toString(16).padStart(2,"0")).join("");
+}
+
+/* -------------------- Persistence -------------------- */
+function loadUchronies(){ try{const raw=localStorage.getItem("abw_uchronies_v6");return raw?JSON.parse(raw):[];}catch{return [];} }
+function saveUchronies(list){ localStorage.setItem("abw_uchronies_v6", JSON.stringify(list)); }
+
+function defaultGame(){
+  return {
+    runSeed: randHex(16),   // NEW: random per uchrony -> different years
+    karma:0,
+    // hidden world state (used for generation + end card)
+    stats:{ peace:50, tech:28, health:35, climate:55, freedom:30, inequality:65 },
+    posDecisions:[],
+    chain:[]
+  };
+}
+function saveGame(){
+  localStorage.setItem("abw_freeflow_v6", JSON.stringify({
+    runSeed:game.runSeed,
+    karma:game.karma,
+    stats:game.stats,
+    posDecisions:game.posDecisions||[],
+    chain:game.chain||[]
+  }));
+}
+function loadGame(){
+  try{
+    const raw=localStorage.getItem("abw_freeflow_v6");
+    if(!raw) return null;
+    const g=JSON.parse(raw);
+    if(!g.stats || typeof g.karma!=="number" || !g.runSeed) return null;
+    return { runSeed:g.runSeed, karma:g.karma, stats:g.stats, posDecisions:g.posDecisions||[], chain:g.chain||[] };
+  }catch{ return null; }
+}
+
+let game = loadGame() || defaultGame();
+
+/* -------------------- Templates (real + invented) -------------------- */
+function opt(text, karma, delta){ return {text, karma, delta}; }
+function tpl(era, title, desc, options, weight){ return {era, title, desc, options, weight, kind:"real"}; }
+function dyn(era, titleFn, desc, options, weight){ return {era, titleFn, desc, options, weight, kind:"invented"}; }
+
+let rng = makeRng(seedString());
+function seedString(){
+  // NEW: runSeed changes the initial years each uchrony
+  const base="abw_freeflow_15000bce_v2";
+  const d=(game.posDecisions||[]).map(x=>`${x.pos}:${x.choiceIndex}`).join("|");
+  return base+"|seed="+game.runSeed+"|"+d;
+}
+function pick(arr){ return arr[Math.floor(rng()*arr.length)]; }
+
+const templates = [
+  tpl([-15000,-10500], "Warming world reshapes migration routes",
+    "As ice retreats, people follow herds and coastlines. Cooperation and knowledge transfer decide survival.",
+    [
+      opt("Share navigation and foraging knowledge between groups.", +1, {peace:+6, health:+3, inequality:-3}),
+      opt("Raid neighbors as resources fluctuate.", -1, {peace:-8, health:-2, inequality:+4}),
+      opt("Create seasonal councils to settle disputes.", +1, {peace:+5, freedom:+2})
+    ],
+    {w:{peace:1.0}}
+  ),
+  tpl([-13000,-9000], "Sedentary settlements appear",
+    "Staying put enables storage and specialization—also land disputes and new hierarchies.",
+    [
+      opt("Rotate leadership; keep stores accountable.", +1, {freedom:+5, inequality:-5, peace:+2}),
+      opt("Let store-keepers become permanent elites.", -1, {inequality:+10, freedom:-3}),
+      opt("Federate villages to manage water and trade.", +1, {peace:+4, tech:+2})
+    ],
+    {w:{inequality:-0.9, freedom:0.7}}
+  ),
+  tpl([-10500,-7000], "Agriculture takes off (domestication wave)",
+    "Farming boosts population but risks malnutrition and inequality without safety nets.",
+    [
+      opt("Mixed farming + commons rules + grain reserves.", +1, {health:+4, inequality:-6, tech:+2}),
+      opt("Monoculture + landlord control.", -1, {inequality:+10, health:-2}),
+      opt("Slow adoption: farming + foraging resilience.", +1, {health:+3, climate:+1, tech:+1})
+    ],
+    {w:{inequality:-1.1, health:0.7}}
+  ),
+  tpl([-7000,-3500], "Writing and accounting emerge",
+    "Records can broaden trade and law—or centralize power behind scribes.",
+    [
+      opt("Open literacy training; standardize fair contracts.", +1, {freedom:+7, tech:+5, inequality:-3}),
+      opt("Restrict literacy to temples/palaces.", -1, {freedom:-6, inequality:+5}),
+      opt("Use writing for engineering and medicine manuals.", +1, {tech:+6, health:+2})
+    ],
+    {w:{freedom:1.0, tech:0.8}}
+  ),
+  tpl([-5000,-1000], "Bronze Age trade networks expand",
+    "Trade spreads ideas and disease; institutions decide which dominates.",
+    [
+      opt("Treaties + shared standards + quarantine ports.", +1, {peace:+5, health:+3, tech:+2}),
+      opt("Piracy and tribute empires dominate routes.", -1, {peace:-6, inequality:+4}),
+      opt("Loose networks: high trade, low enforcement.", 0, {tech:+2, health:-1})
+    ],
+    {w:{peace:0.8, health:0.7}}
+  ),
+  tpl([-1200,-400], "Ironworking spreads widely",
+    "Cheaper tools raise yields; cheaper weapons raise wars. Policy decides.",
+    [
+      opt("Prioritize tools, farming, and public works.", +1, {tech:+6, health:+2, peace:+1}),
+      opt("Arms race between kingdoms.", -1, {peace:-8, inequality:+2}),
+      opt("Weapon limits + regional diplomacy.", +1, {peace:+6, freedom:+1})
+    ],
+    {w:{peace:0.9, tech:0.7}}
+  ),
+  tpl([-800,200], "Classical civic models compete",
+    "Ideas about law, citizenship, and equality spread—either as rights or as propaganda.",
+    [
+      opt("Civic education + rule of law + expanded rights.", +1, {freedom:+10, peace:+2, inequality:-4}),
+      opt("Entrench rigid class systems.", -1, {inequality:+8, freedom:-4}),
+      opt("Rights locally, conquest externally.", 0, {freedom:+2, peace:-2})
+    ],
+    {w:{freedom:1.2, inequality:-0.7}}
+  ),
+  tpl([200,700], "A major empire reforms or fragments",
+    "Reforms stabilize trade and public health—or collapse into rival states.",
+    [
+      opt("Tax reform + roads + sanitation + grain policy.", +1, {peace:+5, health:+6, tech:+2}),
+      opt("Overextract provinces; elite luxury politics.", -1, {peace:-6, inequality:+6}),
+      opt("Decentralize into resilient city federations.", +1, {peace:+4, freedom:+2})
+    ],
+    {w:{health:0.9, peace:0.8}}
+  ),
+  tpl([1200,1495], "The Black Death shocks Eurasia",
+    "A pandemic collides with dense trade routes. Public trust and labor bargaining shift for centuries.",
+    [
+      opt("Quarantine + clean water + early public health offices.", +1, {health:+10, peace:+2}),
+      opt("Scapegoating and censorship.", -1, {health:-8, freedom:-4, peace:-3}),
+      opt("Local mitigation only.", -1, {health:-4})
+    ],
+    {w:{health:1.2}}
+  ),
+  tpl([1400,1700], "Printing press goes mainstream",
+    "Information can empower citizens—or be throttled by gatekeepers.",
+    [
+      opt("Protect literacy and independent presses.", +1, {freedom:+10, inequality:-4}),
+      opt("Strict licensing and censorship.", -1, {freedom:-6}),
+      opt("Schools first, then open printing.", +1, {freedom:+6, tech:+3})
+    ],
+    {w:{freedom:1.0}}
+  ),
+  tpl([1492,1800], "Transoceanic contact reshapes continents",
+    "Contact can be exchange—or extraction with massive disease shock.",
+    [
+      opt("Rights protections + fair treaties + disease controls.", +1, {health:+6, inequality:-6, freedom:+4}),
+      opt("Extraction-first conquest.", -1, {inequality:+10, freedom:-6, peace:-4}),
+      opt("Slow regulated exchange; reduce shock.", +1, {health:+4, peace:+2})
+    ],
+    {w:{health:0.8, inequality:-0.8}}
+  ),
+  tpl([1760,1913], "Industrial Revolution accelerates",
+    "Productivity explodes; so do pollution and exploitation unless standards arrive early.",
+    [
+      opt("Labor rights + early clean-air rules.", +1, {inequality:-6, climate:+6, health:+4, tech:+2}),
+      opt("Max output; ignore conditions.", -1, {inequality:+10, health:-4, climate:-6, tech:+3}),
+      opt("Urban planning & transit.", +1, {health:+4, climate:+4, tech:-1})
+    ],
+    {w:{inequality:-1.0, climate:0.8}}
+  ),
+  tpl([1914,1945], "The Great War ignites",
+    "One assassination becomes a cascade. Systems can absorb shocks… or shatter.",
+    [
+      opt("De-escalation treaties + arbitration.", +1, {peace:+12, freedom:+2}),
+      opt("Alliances fire automatically.", 0, {peace:-6, inequality:+2}),
+      opt("Escalate for a ‘decisive’ outcome.", -1, {peace:-12, health:-4})
+    ],
+    {w:{peace:1.2}}
+  ),
+  tpl([1939,1946], "World War II escalates",
+    "A global crisis of authoritarianism. Outcome shapes the century’s moral baseline.",
+    [
+      opt("Accelerate defeat + reconciliation + trials.", +1, {peace:+10, freedom:+6, inequality:-2}),
+      opt("Let history play out.", 0, {peace:-2}),
+      opt("Enable authoritarian victory.", -1, {freedom:-20, peace:-15, inequality:+10})
+    ],
+    {w:{freedom:1.2, peace:1.0}}
+  ),
+  tpl([1960,1999], "The internet emerges",
+    "Default architecture decides privacy, power, and access.",
+    [
+      opt("Net neutrality + encryption + universal access.", +1, {freedom:+10, tech:+8, inequality:-3}),
+      opt("Corporate-gated model with weak privacy.", -1, {freedom:-5, inequality:+5, tech:+4}),
+      opt("Public utility model (slow, stable, regulated).", +1, {freedom:+4, inequality:-2, tech:+2})
+    ],
+    {w:{freedom:1.0, tech:0.8}}
+  ),
+  tpl([2000,2025], "A climate decade begins",
+    "Policy choices decide disaster frequency and migration pressure.",
+    [
+      opt("Rapid renewables + adaptation funds.", +1, {climate:+12, health:+3, peace:+2}),
+      opt("Delay action for short-term politics.", -1, {climate:-12, peace:-2, health:-2}),
+      opt("Tech-only fix (geoengineering focus).", 0, {tech:+5, climate:+2, peace:-1})
+    ],
+    {w:{climate:1.2}}
+  ),
+
+  dyn([-15000,2025], () => pick([
+      "A breakthrough in {field}",
+      "A scandal reshapes {institution}",
+      "A treaty redraws {region}",
+      "A crisis hits {system}",
+      "A movement changes {value}",
+      "A new trade network links {region}",
+      "A frontier settlement becomes a metropolis in {region}"
+    ]),
+    "A curveball: new actors, new tools, and unintended consequences.",
+    [
+      opt("Push it toward rights and shared prosperity.", +1, {freedom:+6, inequality:-4, peace:+2}),
+      opt("Let power concentrate around elites.", -1, {inequality:+6, freedom:-3}),
+      opt("Prioritize stability over reform.", 0, {peace:+3, freedom:-1})
+    ],
+    {w:{freedom:0.7, inequality:-0.5}}
+  )
+];
+
+function fillDynTitle(title){
+  const dict = {
+    field: pick(["medicine","energy","computing","materials","agriculture","education","transport","vaccines","water systems","navigation","metallurgy"]),
+    institution: pick(["the press","a council","a royal court","a trade guild","a parliament","a public health council","a priesthood"]),
+    region: pick(["the Levant","Mesopotamia","the Mediterranean","South Asia","the Pacific","the Middle East","Africa","the Americas","the Arctic","Eurasia"]),
+    system: pick(["food systems","cities","finance","healthcare","governance","climate policy","water supplies","information ecosystems","labor markets"]),
+    value: pick(["privacy","labor rights","women’s rights","civil rights","open science","anti-corruption","local democracy","religious tolerance","rule of law"])
+  };
+  return title.replaceAll("{field}",dict.field)
+              .replaceAll("{institution}",dict.institution)
+              .replaceAll("{region}",dict.region)
+              .replaceAll("{system}",dict.system)
+              .replaceAll("{value}",dict.value);
+}
+
+/* -------------------- Selection & year jumps -------------------- */
+function weightForTemplate(t){
+  let w=1.0;
+  if(t.weight && t.weight.w){
+    for(const [k,coef] of Object.entries(t.weight.w)){
+      const v = game.stats[k] ?? 50;
+      const norm = (v-50)/50;
+      w *= (1 + coef*norm);
+    }
+  }
+  // Bias toward real templates (closer to ABW)
+  w *= (t.kind==="real" ? 1.25 : 0.95);
+  return Math.max(0.05,w);
+}
+function chooseTemplate(year){
+  const cands = templates.filter(t=> year>=t.era[0] && year<=t.era[1]).map(t=>({...t}));
+  const weights = cands.map(weightForTemplate);
+  const total = weights.reduce((s,x)=>s+x,0);
+  let r = rng()*total;
+  for(let i=0;i<cands.length;i++){ r-=weights[i]; if(r<=0) return cands[i]; }
+  return cands[cands.length-1];
+}
+
+function eraBucket(year){
+  if(year < -10500) return "paleo";
+  if(year < -3500) return "neolithic";
+  if(year < -1200) return "bronze";
+  if(year < 200) return "classical";
+  if(year < 700) return "late_antique";
+  if(year < 1200) return "medieval";
+  if(year < 1492) return "late_medieval";
+  if(year < 1760) return "early_modern";
+  if(year < 1914) return "industrial";
+  if(year < 1946) return "world_wars";
+  if(year < 2000) return "postwar";
+  return "modern";
+}
+function yearJump(year){
+  const e=eraBucket(year);
+  if(e==="paleo") return Math.floor(400 + rng()*1200);
+  if(e==="neolithic") return Math.floor(200 + rng()*700);
+  if(e==="bronze") return Math.floor(120 + rng()*450);
+  if(e==="classical") return Math.floor(60 + rng()*220);
+  if(e==="late_antique") return Math.floor(30 + rng()*120);
+  if(e==="medieval") return Math.floor(20 + rng()*90);
+  if(e==="late_medieval") return Math.floor(10 + rng()*60);
+  if(e==="early_modern") return Math.floor(8 + rng()*50);
+  if(e==="industrial") return Math.floor(5 + rng()*25);
+  if(e==="world_wars") return Math.floor(1 + rng()*7);
+  if(e==="postwar") return Math.floor(2 + rng()*12);
+  return Math.floor(1 + rng()*6);
+}
+
+function applyStatDelta(delta){
+  for(const [k,v] of Object.entries(delta||{})){
+    game.stats[k] = clamp((game.stats[k] ?? 50) + v, 0, 100);
+  }
+}
+
+/* -------------------- Build chain -------------------- */
+function hash32(str){
+  let h=2166136261;
+  for(let i=0;i<str.length;i++){ h^=str.charCodeAt(i); h=Math.imul(h,16777619); }
+  return (h>>>0).toString(16).slice(0,8);
+}
+
+function rebuild(){
+  rng = makeRng(seedString());
+
+  // reset derived state and replay decisions
+  game.karma = 0;
+  game.stats = { peace:50, tech:28, health:35, climate:55, freedom:30, inequality:65 };
+
+  const chain=[];
+  let year=-15000;
+  let safety=0;
+  let ordinal=0;
+
+  while(year <= 2025 && safety++ < 720){
+    ordinal++;
+    const t = chooseTemplate(year);
+    const title = (t.kind==="invented") ? fillDynTitle(t.titleFn()) : t.title;
+    const id = `${year}_${hash32(title)}_${ordinal}`;
+    const node = { id, year, title, desc:t.desc, options:t.options, chosen:null, kind:t.kind };
+    chain.push(node);
+
+    const pd=(game.posDecisions||[]).find(x=>x.pos===chain.length-1);
+    if(pd){
+      node.chosen = pd.choiceIndex;
+      const o = node.options[pd.choiceIndex];
+      game.karma += o.karma;          // simplified karma: -1, 0, +1
+      applyStatDelta(o.delta);        // hidden effects (for suspense)
+    }
+
+    year += yearJump(year);
+
+    // anchors (still not "steps")
+    if (year < -10500 && rng() < 0.08) year = -10500;
+    if (year < -3500  && rng() < 0.08) year = -3500;
+    if (year < -1200  && rng() < 0.07) year = -1200;
+    if (year < 0      && rng() < 0.06) year = 0;
+    if (year < 476    && rng() < 0.05) year = 476;
+    if (year < 1200   && rng() < 0.05) year = 1200;
+    if (year < 1492   && rng() < 0.06) year = 1492;
+    if (year < 1760   && rng() < 0.05) year = 1760;
+    if (year < 1914   && rng() < 0.06) year = 1914;
+    if (year < 1939   && rng() < 0.06) year = 1939;
+    if (year < 1945   && rng() < 0.06) year = 1945;
+    if (year < 2000   && rng() < 0.06) year = 2000;
+    if (year < 2020   && rng() < 0.10) year = 2020;
+    if (year < 2025   && rng() < 0.12) year = 2025;
+  }
+
+  // ensure end card at 2025
+  if(!chain.length || chain[chain.length-1].year !== 2025){
+    chain.push({
+      id:`2025_${hash32("Endgame Card")}_final`,
+      year:2025,
+      title:"The World You Shaped",
+      desc:"A summary card of your timeline’s direction.",
+      options:[{text:"(End card)", karma:0, delta:{}}],
+      chosen:0,
+      kind:"real"
+    });
+  }
+
+  game.chain = chain;
+  saveGame();
+  renderAll();
+}
+
+/* -------------------- End card -------------------- */
+function endCardText(){
+  const s=game.stats;
+  const score = (s.peace + s.health + s.climate + s.freedom + s.tech + (100-s.inequality)) / 6;
+
+  const vibe =
+    score >= 78 ? "High-trust, high-capacity world with strong institutions." :
+    score >= 62 ? "Mostly stable world with tradeoffs and regional cracks." :
+    score >= 46 ? "Uneven world: progress exists, but crises are frequent." :
+                  "Low-trust world: fragmentation, scarcity politics, and recurring shocks.";
+
+  const hints=[];
+  if(s.climate >= 65) hints.push("Climate action is coordinated; disasters are less destabilizing.");
+  if(s.climate <= 35) hints.push("Climate shocks drive migration and political stress.");
+  if(s.health >= 65) hints.push("Public health capacity is strong and trusted.");
+  if(s.freedom >= 65) hints.push("Rights and civic participation are robust.");
+  if(s.freedom <= 35) hints.push("Surveillance and centralized control expand.");
+  if(s.inequality <= 40) hints.push("Inequality is contained; mobility improves.");
+  if(s.inequality >= 70) hints.push("Extreme inequality fuels unrest.");
+  if(s.tech >= 70) hints.push("Rapid tech diffusion accelerates both benefits and risks.");
+  if(s.peace <= 40) hints.push("Geopolitical conflict stays hot.");
+
+  return `<strong>${vibe}</strong><br/><br/>Karma: <strong>${game.karma}</strong><br/><br/>• ${hints.slice(0,4).join("<br/>• ")}`;
+}
+
+/* -------------------- Render -------------------- */
+const elKarma=document.getElementById("karma");
+const elTimeline=document.getElementById("timeline");
+const elEnd=document.getElementById("endcard");
+
+const modalBack=document.getElementById("modalBack");
+const modalTitle=document.getElementById("modalTitle");
+const modalDesc=document.getElementById("modalDesc");
+const modalChoices=document.getElementById("modalChoices");
+
+function renderTimeline(){
+  elTimeline.innerHTML="";
+  (game.chain||[]).forEach((ev, pos)=>{
+    const editable = (ev.year!==2025 || ev.options.length>1);
+    const changed = editable && ev.options.length>1 && ev.chosen!==null;
+    const cls = changed ? "pink" : "yellow";
+
+    const li=document.createElement("li");
+    const a=document.createElement("a");
+    a.className=`eventTitle ${cls}`;
+    a.href="javascript:void(0)";
+    a.textContent=`${formatYear(ev.year)} — ${ev.title}`;
+    a.onclick=()=>openEvent(pos);
+
+    const meta=document.createElement("div");
+    meta.className="eventMeta";
+    meta.textContent=ev.desc + (ev.kind==="invented" ? " (procedurally generated)" : "");
+
+    const mod=document.createElement("div");
+    mod.className="eventMeta";
+    mod.style.marginTop="6px";
+    mod.innerHTML = `<span style="opacity:.85">[POSSIBLE MODIFICATION]</span>` + (changed?` · <span style="color:var(--pink);font-weight:800">changed</span>`:"");
+
+    li.appendChild(a); li.appendChild(meta); li.appendChild(mod);
+    elTimeline.appendChild(li);
+  });
+}
+function renderAll(){
+  elKarma.textContent = game.karma;
+  renderTimeline();
+  elEnd.innerHTML = endCardText();
+}
+
+/* -------------------- Modal interactions (NO DELTAS SHOWN) -------------------- */
+function openEvent(pos){
+  const ev=(game.chain||[])[pos];
+  if(!ev) return;
+
+  // End card: no editing
+  if(ev.year===2025 && ev.options.length===1){
+    modalTitle.textContent = `${formatYear(ev.year)} — ${ev.title}`;
+    modalDesc.textContent = "This is the endgame summary card. Change earlier events to rewrite it.";
+    modalChoices.innerHTML = "";
+    modalBack.style.display="flex";
+    return;
+  }
+
+  modalTitle.textContent = `${formatYear(ev.year)} — ${ev.title}`;
+  modalDesc.textContent = "Choose a modification (effects are hidden):";
+  modalChoices.innerHTML="";
+
+  ev.options.forEach((o, choiceIndex)=>{
+    const b=document.createElement("button");
+    b.className="choice";
+    // suspense: no +/-, no effects
+    b.textContent = o.text;
+    b.onclick = ()=>chooseModification(pos, choiceIndex);
+    modalChoices.appendChild(b);
+  });
+
+  modalBack.style.display="flex";
+}
+function closeModal(){ modalBack.style.display="none"; }
+
+function chooseModification(pos, choiceIndex){
+  const kept=(game.posDecisions||[]).filter(d=>d.pos<=pos);
+  const existing=kept.find(d=>d.pos===pos);
+  if(existing) existing.choiceIndex=choiceIndex;
+  else kept.push({pos, choiceIndex});
+  game.posDecisions = kept.sort((a,b)=>a.pos-b.pos);
+
+  rebuild();
+  closeModal();
+}
+
+/* -------------------- Uchronies / Controls -------------------- */
+function finishAndArchive(){
+  const changed=(game.chain||[]).filter(e=>e.options.length>1 && e.chosen!==null).slice(0,6)
+    .map(e=>`${formatYear(e.year)}:${e.title}`).join(" | ");
+  const summary=changed || "No changes";
+  const entry={when:new Date().toISOString().slice(0,10), karma:game.karma, summary};
+  const list=loadUchronies(); list.push(entry); saveUchronies(list);
+}
+function showUchronies(){
+  const list=loadUchronies();
+  const lines=list.slice().reverse().slice(0,20).map((u,i)=>`${i+1}. ${u.when} — Karma ${u.karma} — ${u.summary}`).join("\n");
+  alert(list.length?`Your Uchronies (most recent first):\n\n${lines}`:"No saved uchronies yet. Restart after making changes to save one.");
+}
+function startOver(){
+  if(confirm("Start over? This will archive your current uchrony and generate a new random timeline.")){
+    finishAndArchive();
+    game = defaultGame();       // NEW runSeed -> new starting years
+    saveGame();
+    rebuild();
+    window.scrollTo({top:0,behavior:"smooth"});
+  }
+}
+function exportSave(){
+  const data={
+    runSeed: game.runSeed,
+    karma: game.karma,
+    decisionsByPosition: game.posDecisions||[],
+    timelineSnapshot: (game.chain||[]).map(e=>({year:e.year,title:e.title,chosen:e.chosen,kind:e.kind}))
+  };
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a"); a.href=url; a.download="abw_15000bce_suspense_save.json";
+  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+}
+
+/* -------------------- Init -------------------- */
+(function init(){
+  if(!game.chain || !game.chain.length){
+    rebuild();
+  }else{
+    // Ensure karma and endcard are visible (stats are stored)
+    renderAll();
+  }
+})();
+</script>
+</body>
+</html>
